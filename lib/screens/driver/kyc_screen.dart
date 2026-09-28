@@ -1,0 +1,247 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shahin_app/core/config/supabase_config.dart';
+import 'package:shahin_app/repositories/auth_repository.dart';
+
+class DriverKycScreen extends StatefulWidget {
+  const DriverKycScreen({super.key});
+
+  @override
+  State<DriverKycScreen> createState() => _DriverKycScreenState();
+}
+
+class _DriverKycScreenState extends State<DriverKycScreen> {
+  final AuthRepository _authRepo = AuthRepository();
+  final ImagePicker _picker = ImagePicker();
+  final SupabaseClient _supabase = SupabaseConfig.client;
+
+  Map<String, File?> _documentFiles = {
+    'personal_photo': null,
+    'national_id': null,
+    'driving_license': null,
+    'vehicle_registration': null,
+  };
+
+  bool _loading = false;
+  String? _driverProfileId;
+  String? _approvalStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDriverProfile();
+  }
+
+  Future<void> _loadDriverProfile() async {
+    final user = _authRepo.getCurrentUser();
+    if (user == null) return;
+    final data = await _supabase
+        .from('driver_profiles')
+        .select('id, approval_status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+    if (data != null) {
+      setState(() {
+        _driverProfileId = data['id'];
+        _approvalStatus = data['approval_status'];
+      });
+      if (_approvalStatus == 'approved') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.pushReplacementNamed(context, '/driver-home');
+        });
+      }
+    }
+  }
+
+  Future<void> _pickImage(String type) async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() => _documentFiles[type] = File(image.path));
+    }
+  }
+
+  Future<String?> _uploadFile(File file, String path) async {
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fullPath = '$path/$fileName';
+      // وثائق السائق في bucket خاص (بدون رابط عام) - نحفظ المسار فقط
+      await _supabase.storage.from('kyc-docs').upload(fullPath, file);
+      return fullPath;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل رفع الملف: $e')),
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<void> _submitDocuments() async {
+    // استخدام متغير محلي لحل مشكلة الترويج
+    final driverProfileId = _driverProfileId;
+    if (driverProfileId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لم يتم العثور على ملف السائق')),
+      );
+      return;
+    }
+
+    // التحقق من وجود جميع الملفات
+    final missingDocs = _documentFiles.entries
+        .where((e) => e.value == null)
+        .map((e) => _getArabicName(e.key))
+        .toList();
+    if (missingDocs.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('يرجى رفع: ${missingDocs.join("، ")}')),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final uploadedUrls = <String, String>{};
+      // رفع جميع الملفات
+      for (var entry in _documentFiles.entries) {
+        final file = entry.value!;
+        final url = await _uploadFile(file, driverProfileId);
+        if (url != null) {
+          uploadedUrls[entry.key] = url;
+        } else {
+          throw Exception('فشل رفع ${_getArabicName(entry.key)}');
+        }
+      }
+
+      // حفظ البيانات في driver_documents
+      for (var entry in uploadedUrls.entries) {
+        await _supabase.from('driver_documents').upsert({
+          'driver_profile_id': driverProfileId,
+          'document_type': entry.key,
+          'image_url': entry.value,
+          'status': 'pending',
+          'uploaded_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'driver_profile_id, document_type');
+      }
+
+      // تحديث حالة ملف السائق إلى "قيد المراجعة"
+      await _supabase.from('driver_profiles').update({
+        'approval_status': 'under_review',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', driverProfileId);
+
+      setState(() => _approvalStatus = 'under_review');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('تم رفع المستندات بنجاح، في انتظار المراجعة')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل حفظ المستندات: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _getArabicName(String type) {
+    switch (type) {
+      case 'personal_photo':
+        return 'الصورة الشخصية';
+      case 'national_id':
+        return 'البطاقة الوطنية';
+      case 'driving_license':
+        return 'رخصة القيادة';
+      case 'vehicle_registration':
+        return 'استمارة المركبة';
+      default:
+        return type;
+    }
+  }
+
+  Widget _buildDocumentTile(String type, String title, IconData icon) {
+    final file = _documentFiles[type];
+    final isUploaded = file != null;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListTile(
+        leading: Icon(icon, color: isUploaded ? Colors.green : Colors.grey),
+        title: Text(title),
+        subtitle: isUploaded
+            ? Text('تم اختيار الصورة', style: TextStyle(color: Colors.green))
+            : const Text('لم يتم الرفع بعد'),
+        trailing: ElevatedButton(
+          onPressed: () => _pickImage(type),
+          child: Text(isUploaded ? 'تغيير' : 'رفع'),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('توثيق حساب السائق')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            if (_approvalStatus == 'under_review')
+              Container(
+                padding: const EdgeInsets.all(12),
+                color: Colors.orange.shade100,
+                child: const Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Expanded(
+                        child: Text(
+                            'مستنداتك قيد المراجعة. سيتم إعلامك عند الاعتماد.')),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 16),
+            const Text(
+              'يجب رفع المستندات التالية للموافقة على حسابك',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: ListView(
+                children: [
+                  _buildDocumentTile(
+                      'personal_photo', 'الصورة الشخصية', Icons.person),
+                  _buildDocumentTile(
+                      'national_id', 'البطاقة الوطنية', Icons.badge),
+                  _buildDocumentTile(
+                      'driving_license', 'رخصة القيادة', Icons.drive_eta),
+                  _buildDocumentTile('vehicle_registration', 'استمارة المركبة',
+                      Icons.car_repair),
+                  const SizedBox(height: 30),
+                  if (_loading)
+                    const Center(child: CircularProgressIndicator())
+                  else
+                    ElevatedButton(
+                      onPressed: _submitDocuments,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('إرسال المستندات للمراجعة'),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
