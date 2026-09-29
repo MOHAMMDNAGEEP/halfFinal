@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shahin_app/core/config/supabase_config.dart';
 import 'package:shahin_app/screens/splash/splash_screen.dart';
@@ -20,6 +21,14 @@ class ShahinApp extends StatelessWidget {
     return MaterialApp(
       title: 'شاهين',
       debugShowCheckedModeBanner: false,
+      // اللغة العربية واتجاه الواجهة من اليمين لليسار
+      locale: const Locale('ar'),
+      supportedLocales: const [Locale('ar')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         primarySwatch: Colors.blue,
         fontFamily: 'Cairo',

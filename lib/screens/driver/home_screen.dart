@@ -27,6 +27,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   List<OrderModel> _nearbyOrders = [];
   String? _driverVehicleTypeId;
   String? _userName;
+  String? _userPhone;
+  String? _userImageUrl;
 
   Timer? _retryTimer;
   int _currentRetryStep = 0;
@@ -50,10 +52,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     if (user == null) return;
     final data = await SupabaseConfig.client
         .from('users')
-        .select('full_name')
+        .select('full_name, phone, profile_image_url')
         .eq('id', user.id)
         .single();
-    setState(() => _userName = data['full_name']);
+    if (!mounted) return;
+    setState(() {
+      _userName = data['full_name'];
+      _userPhone = data['phone'];
+      _userImageUrl = data['profile_image_url'];
+    });
   }
 
   Future<void> _loadDriverInfo() async {
@@ -227,12 +234,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Icon(Icons.person, size: 60, color: Colors.white),
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white24,
+                    backgroundImage:
+                        (_userImageUrl != null && _userImageUrl!.isNotEmpty)
+                            ? NetworkImage(_userImageUrl!)
+                            : null,
+                    child: (_userImageUrl == null || _userImageUrl!.isEmpty)
+                        ? const Icon(Icons.person, size: 36, color: Colors.white)
+                        : null,
+                  ),
                   const SizedBox(height: 8),
                   Text(_userName ?? 'السائق',
                       style:
                           const TextStyle(color: Colors.white, fontSize: 18)),
-                  Text(_authRepo.getCurrentUser()?.phone ?? '',
+                  Text(_userPhone ?? _authRepo.getCurrentUser()?.phone ?? '',
                       style:
                           const TextStyle(color: Colors.white70, fontSize: 14)),
                 ],
@@ -246,7 +263,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const ProfileScreen(isDriver: true)));
+                        builder: (_) => const ProfileScreen(isDriver: true)))
+                    .then((_) => _loadUserName()); // تحديث الصورة والاسم بعد الرجوع
               },
             ),
             ListTile(

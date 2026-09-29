@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shahin_app/widgets/app_logo.dart';
 import 'package:shahin_app/repositories/auth_repository.dart';
 import 'package:shahin_app/screens/onboarding/onboarding_screen.dart';
 import 'package:shahin_app/screens/auth/login_screen.dart';
@@ -103,7 +104,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.local_shipping, size: 80, color: Colors.blue),
+            AppLogo(size: 140),
             SizedBox(height: 20),
             CircularProgressIndicator(),
             SizedBox(height: 20),

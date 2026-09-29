@@ -36,6 +36,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   bool _isCreatingOrder = false;
 
   String? _userName; // متغير لحفظ الاسم
+  String? _userPhone;
+  String? _userImageUrl;
 
   @override
   void initState() {
@@ -50,10 +52,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     if (user == null) return;
     final data = await SupabaseConfig.client
         .from('users')
-        .select('full_name')
+        .select('full_name, phone, profile_image_url')
         .eq('id', user.id)
         .single();
-    setState(() => _userName = data['full_name']);
+    if (!mounted) return;
+    setState(() {
+      _userName = data['full_name'];
+      _userPhone = data['phone'];
+      _userImageUrl = data['profile_image_url'];
+    });
   }
 
   Future<void> _determineCurrentLocation() async {
@@ -214,14 +221,24 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Icon(Icons.person, size: 60, color: Colors.white),
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white24,
+                    backgroundImage:
+                        (_userImageUrl != null && _userImageUrl!.isNotEmpty)
+                            ? NetworkImage(_userImageUrl!)
+                            : null,
+                    child: (_userImageUrl == null || _userImageUrl!.isEmpty)
+                        ? const Icon(Icons.person, size: 36, color: Colors.white)
+                        : null,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                       _userName ??
                           'العميل', // استبدلنا النص الثابت بالاسم المتغير
                       style:
                           const TextStyle(color: Colors.white, fontSize: 18)),
-                  Text(_authRepo.getCurrentUser()?.phone ?? '',
+                  Text(_userPhone ?? _authRepo.getCurrentUser()?.phone ?? '',
                       style:
                           const TextStyle(color: Colors.white70, fontSize: 14)),
                 ],
@@ -236,7 +253,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (_) => const ProfileScreen(isDriver: false)),
-                );
+                ).then((_) => _loadUserName()); // تحديث الصورة والاسم بعد الرجوع
               },
             ),
             ListTile(
