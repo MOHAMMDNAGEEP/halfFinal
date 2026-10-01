@@ -286,7 +286,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       ),
       // ✅ إضافة AppBar مع زر القائمة
       appBar: AppBar(
-        title: const Text('شاهين', style: TextStyle(fontSize: 18)),
+        title: const Text('نجـيـب', style: TextStyle(fontSize: 18)),
         backgroundColor: Colors.blue.withValues(alpha: 0.8),
         elevation: 0,
       ),

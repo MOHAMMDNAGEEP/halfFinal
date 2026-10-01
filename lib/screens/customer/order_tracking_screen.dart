@@ -29,6 +29,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
   String? _driverLoadedFor; // السائق الذي جُلبت بياناته
   String? _pickupCode;
   bool _codeRequested = false;
+  String? _deliveryCode;
+  bool _deliveryRequested = false;
   String? _locDriverId;
   Stream<LatLng?>? _locStream; // موقع السائق الحي
 
@@ -44,6 +46,15 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
       if (mounted) setState(() => _pickupCode = code);
     } catch (_) {
       _codeRequested = false; // نعيد المحاولة عند التحديث القادم
+    }
+  }
+
+  Future<void> _fetchDeliveryCode() async {
+    try {
+      final code = await _orderRepo.getDeliveryCode(widget.orderId);
+      if (mounted) setState(() => _deliveryCode = code);
+    } catch (_) {
+      _deliveryRequested = false; // نعيد المحاولة عند التحديث القادم
     }
   }
 
@@ -93,7 +104,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
     if (_order == null) return;
     final url =
         'https://www.openstreetmap.org/?mlat=${_order!.pickupLat}&mlon=${_order!.pickupLng}';
-    Share.share('تابع رحلتي على شاهين: $url', subject: 'مشاركة موقع الرحلة');
+    Share.share('تابع رحلتي على نجـيـب: $url', subject: 'مشاركة موقع الرحلة');
   }
 
   Future<void> _cancelOrder() async {
@@ -166,6 +177,12 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
             _fetchPickupCode();
           }
 
+          // كود التسليم: يُطلب من السيرفر عند بدء الرحلة فقط
+          if (_order!.status == 'started' && !_deliveryRequested) {
+            _deliveryRequested = true;
+            _fetchDeliveryCode();
+          }
+
           // عند اكتمال الرحلة → انتقل إلى شاشة التقييم
           if (_order!.status == 'completed') {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -226,6 +243,17 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                             fontWeight: FontWeight.bold,
                             color: Colors.blue),
                       ),
+                    if (_deliveryCode != null && _order!.status == 'started')
+                      ...[
+                      Text(
+                        'كود التسليم: $_deliveryCode',
+                        style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green),
+                      ),
+                      const Text('أعطه للسائق عند تسليم البضاعة'),
+                    ],
                   ],
                 ),
               ),

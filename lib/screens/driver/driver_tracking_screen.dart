@@ -119,11 +119,12 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     }
   }
 
-  Future<void> _showCodeDialog() async {
+  // delivery=false: كود الاستلام (بدء الرحلة) | delivery=true: كود التسليم (إنهاء الرحلة)
+  Future<void> _showCodeDialog({bool delivery = false}) async {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('أدخل كود الاستلام'),
+        title: Text(delivery ? 'أدخل كود التسليم من العميل' : 'أدخل كود الاستلام'),
         content: TextField(
           controller: _codeController,
           keyboardType: TextInputType.number,
@@ -140,8 +141,10 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
               // التحقق من الكود يتم في السيرفر (الكود لا ينزل لجهاز السائق)
               String result;
               try {
-                result = await _orderRepo.startTrip(
-                    widget.orderId, _codeController.text.trim());
+                final code = _codeController.text.trim();
+                result = delivery
+                    ? await _orderRepo.completeTrip(widget.orderId, code)
+                    : await _orderRepo.startTrip(widget.orderId, code);
               } catch (_) {
                 result = 'error';
               }
@@ -186,8 +189,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
         );
       case 'started':
         return ElevatedButton(
-          onPressed: () => _updateStatus('completed'),
-          child: const Text('تم التسليم'),
+          onPressed: () => _showCodeDialog(delivery: true),
+          child: const Text('إدخال كود التسليم وإنهاء الرحلة'),
         );
       default:
         return const SizedBox();

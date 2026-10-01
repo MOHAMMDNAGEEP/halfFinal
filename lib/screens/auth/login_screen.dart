@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shahin_app/widgets/app_logo.dart';
 import 'package:shahin_app/widgets/sudan_flag.dart';
 import 'package:shahin_app/repositories/auth_repository.dart';
-import 'package:shahin_app/screens/auth/otp_screen.dart';
+import 'package:shahin_app/screens/auth/ots.txt';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

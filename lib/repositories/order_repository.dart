@@ -153,6 +153,21 @@ class OrderRepository {
     return res as String;
   }
 
+  /// السائق يدخل كود التسليم لإنهاء الرحلة (التحقق في السيرفر).
+  /// النتيجة: ok | wrong_code | locked | not_allowed
+  Future<String> completeTrip(String orderId, String code) async {
+    final res = await _client
+        .rpc('complete_trip', params: {'p_order_id': orderId, 'p_code': code});
+    return res as String;
+  }
+
+  /// كود التسليم للعميل فقط (يرجع null إن لم تكن الحالة started)
+  Future<String?> getDeliveryCode(String orderId) async {
+    final res =
+        await _client.rpc('get_delivery_code', params: {'p_order_id': orderId});
+    return res as String?;
+  }
+
   /// كود الاستلام للعميل فقط (يرجع null إن لم تكن الحالة arrived)
   Future<String?> getPickupCode(String orderId) async {
     final res =

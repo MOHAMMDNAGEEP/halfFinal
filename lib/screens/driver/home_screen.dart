@@ -31,6 +31,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   String? _userImageUrl;
 
   Timer? _retryTimer;
+  Timer? _refreshTimer; // تحديث تلقائي للقائمة
+  bool _refreshing = false;
   int _currentRetryStep = 0;
   final List<double> _searchSteps = [10, 25, 50];
 
@@ -39,11 +41,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     super.initState();
     _loadDriverInfo();
     _loadUserName();
+    _refreshTimer =
+        Timer.periodic(const Duration(seconds: 15), (_) => _silentRefresh());
   }
 
   @override
   void dispose() {
     _retryTimer?.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -70,11 +75,41 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         .from('driver_profiles')
         .select('vehicle_type_id, is_online')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
+    if (!mounted) return;
+    if (profile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ملف السائق غير موجود، تواصل مع الإدارة')),
+      );
+      return;
+    }
     setState(() {
       _driverVehicleTypeId = profile['vehicle_type_id'];
       _isOnline = profile['is_online'] ?? false;
     });
+    // إن كان السائق متصلاً عند فتح التطبيق نبدأ البحث تلقائياً
+    if (_isOnline) _startSearch();
+  }
+
+  /// تحديث صامت للقائمة كل 15 ثانية (بدون مؤشر تحميل) ليظهر أي طلب جديد
+  Future<void> _silentRefresh() async {
+    if (!mounted || !_isOnline || _driverVehicleTypeId == null) return;
+    if (_loadingOrders || _refreshing) return;
+    _refreshing = true;
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      final orders = await _orderRepo.getNearbyOrdersForDriver(
+        driverLat: position.latitude,
+        driverLng: position.longitude,
+        driverVehicleTypeId: _driverVehicleTypeId!,
+        maxDistanceKm: _searchSteps.last,
+      );
+      if (mounted) setState(() => _nearbyOrders = orders);
+    } catch (_) {
+      // نتجاهل أخطاء التحديث الصامت
+    } finally {
+      _refreshing = false;
+    }
   }
 
   Future<void> _toggleOnline(bool value) async {

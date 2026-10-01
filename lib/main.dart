@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shahin_app/core/config/supabase_config.dart';
 import 'package:shahin_app/screens/splash/splash_screen.dart';
+import 'package:shahin_app/widgets/connectivity_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +20,7 @@ class ShahinApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'شاهين',
+      title: 'نجـيـب',
       debugShowCheckedModeBanner: false,
       // اللغة العربية واتجاه الواجهة من اليمين لليسار
       locale: const Locale('ar'),
@@ -29,6 +30,9 @@ class ShahinApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      // شريط تنبيه عند انقطاع الإنترنت يظهر في كل الشاشات
+      builder: (context, child) =>
+          ConnectivityBanner(child: child ?? const SizedBox.shrink()),
       theme: ThemeData(
         primarySwatch: Colors.blue,
         fontFamily: 'Cairo',

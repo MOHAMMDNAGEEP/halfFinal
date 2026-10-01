@@ -31,14 +31,16 @@ class _OtpScreenState extends State<OtpScreen> {
       if (user != null) {
         final profile = await _authRepo.fetchUserProfile(user.id);
         if (profile != null && profile.isOnboarded) {
-          Navigator.pushReplacementNamed(context, '/splash');
+          // نمسح كل الشاشات السابقة (بما فيها تسجيل الدخول) حتى لا نعود لها لاحقاً
+          Navigator.pushNamedAndRemoveUntil(context, '/splash', (route) => false);
         } else {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
               builder: (_) =>
                   CreateProfileScreen(phoneNumber: widget.phoneNumber),
             ),
+            (route) => false,
           );
         }
       }

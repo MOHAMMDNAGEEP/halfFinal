@@ -17,7 +17,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // استبدال الأيقونات بمسارات ملفات Lottie JSON
   final List<Map<String, String>> _onboardingData = [
     {
-      'title': 'مرحباً بك في شاهين',
+      'title': 'مرحباً بك في نجيب',
       'description': 'أسرع طريقة لنقل بضائعك بكل أمان وسهولة',
       'lottieAsset': 'assets/lottie/onboarding1.json',
     },
