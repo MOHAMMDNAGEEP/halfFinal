@@ -1,3 +1,4 @@
+import 'package:shahin_app/services/notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shahin_app/core/config/supabase_config.dart';
 import 'package:shahin_app/models/user_model.dart';
@@ -30,7 +31,11 @@ class AuthRepository {
     }
   }
 
-  Future<void> signOut() async => await _client.auth.signOut();
+  Future<void> signOut() async {
+    // نمسح توكن الإشعارات قبل الخروج حتى لا تصل إشعارات الحساب لهذا الجهاز
+    await NotificationService.clearToken();
+    await _client.auth.signOut();
+  }
 
   Future<UserModel?> fetchUserProfile(String userId) async {
     try {

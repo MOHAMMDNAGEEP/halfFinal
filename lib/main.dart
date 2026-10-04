@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shahin_app/core/config/supabase_config.dart';
 import 'package:shahin_app/screens/splash/splash_screen.dart';
+import 'package:shahin_app/services/notification_service.dart';
 import 'package:shahin_app/widgets/connectivity_banner.dart';
 
 void main() async {
@@ -11,6 +12,7 @@ void main() async {
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
+  await NotificationService.init(); // أي خطأ فيها لا يوقف التطبيق
   runApp(const ShahinApp());
 }
 
@@ -20,8 +22,9 @@ class ShahinApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'نجـيـب',
+      title: 'شاهين',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: NotificationService.messengerKey, // عرض الإشعار والتطبيق مفتوح
       // اللغة العربية واتجاه الواجهة من اليمين لليسار
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],

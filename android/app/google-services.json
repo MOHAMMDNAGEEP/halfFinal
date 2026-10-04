@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "48417829235",
+    "project_id": "shahin-cbc52",
+    "storage_bucket": "shahin-cbc52.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:48417829235:android:c8ccf1b61eeb96b4845506",
+        "android_client_info": {
+          "package_name": "com.example.shahin_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBD9rqxB_DTQuEAql5hptSKbMJQKzJK2e8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
